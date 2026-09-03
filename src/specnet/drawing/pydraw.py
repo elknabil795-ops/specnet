@@ -112,7 +112,7 @@ def _arc(p0, p1, theta, k = 100):
     return p0 + vt + uh
 
 
-def rotation(v, theta):
+def _rotation(v, theta):
     r"""
     Parameters
     ----------
@@ -138,7 +138,7 @@ def rotation(v, theta):
 def _angle(v1, v2):
     n1 = np.sqrt(v1[0]**2 + v1[1]**2)
     n2 = np.sqrt(v2[0]**2 + v2[1]**2)
-    if v2@rotation(v1, np.pi/2) < 0:
+    if v2@_rotation(v1, np.pi/2) < 0:
         return 2 * np.pi - np.acos((v1 @ v2)/(n1 * n2))
     else:
         return np.acos((v1 @ v2)/(n1 * n2))
@@ -295,7 +295,7 @@ def draw(G, **kwargs):
         elif e[0] == e[1]:
             loops_collection[e[0]].append(e[2])
             edges_to_draw[(e[0],e[1],e[2])] = False
-
+    # TODO add independent attributes
     color_loops = []
     loops_line_collection = []
     for u, keys in loops_collection.items():
@@ -356,7 +356,7 @@ def draw(G, **kwargs):
 
     return ax
 
-
+# TODO: make **kwargs for base graph and generalise them to the hole frame.d
 def draw_frames(F, A, S1=[], **kwargs):
     default_kwargs = {
             "layoyt": "spring_layout",
