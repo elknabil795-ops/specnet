@@ -117,7 +117,7 @@ def _rotation(v, theta):
     Parameters
     ----------
         - v : np.darray(K, 2) or np.darray(,2)
-        - theta : float
+        - theta : float or np.drarray(n)
             Angle of rotation
     Returns
     -------
@@ -128,12 +128,13 @@ def _rotation(v, theta):
         assert len(v) == 2, "You can only rotate 2-d vectors"
         dx = v[0] * np.cos(theta) - v[1] * np.sin(theta)
         dy = v[0] * np.sin(theta) + v[1] * np.cos(theta)
-        return np.array([dx, dy])
-    elif len(v.shape) == 2:
+        return np.array([dx, dy]).T
+    
+    elif len(v.shape) == 2: 
         assert v.shape[1] == 2, "You can only rotate 2-d vectors"
         dx = v[:,0] * np.cos(theta) - v[:,1] * np.sin(theta)
         dy = v[:,0] * np.sin(theta) + v[:,1] * np.cos(theta) 
-        return np.array([dx,dy]).reshape(-1,2)
+        return np.array([dx,dy]).T
 
 def _angle(v1, v2):
     n1 = np.sqrt(v1[0]**2 + v1[1]**2)
@@ -146,10 +147,10 @@ def _angle(v1, v2):
 
 def _loop(p0, r, phi_0, theta, k=100):
     angles = np.linspace(-theta, theta, k)
-    radius = r * np.cos((np.pi/(2 * theta)) * (angles)) # dim (K, )
-    x = (np.cos(angles + phi_0) * radius).reshape(-1,1) * np.array([1, 0])
-    y = (np.sin(angles + phi_0) * radius).reshape(-1,1) * np.array([0, 1])
-    return p0 + x  +  y
+    radius = r * np.cos((np.pi/(2 * theta)) * angles) # dim (K, )
+    v = np.array([np.cos(phi_0), np.sin(phi_0)])
+    vr = radius.reshape(-1,1) * _rotation(v, angles)
+    return p0 + vr
 
 
 def draw(G, **kwargs):
@@ -181,7 +182,8 @@ def draw(G, **kwargs):
         "edge_label": None,
         "edge_arrow_size": 10,
         "draw_potential": False,
-        "theta_sep": 0.075,
+        "theta_sep": 0.01,
+        "theta_loop_sep": 0.06,
         "hide_ticks": True, 
         "hide_axis": False,
     }
@@ -311,20 +313,25 @@ def draw(G, **kwargs):
 
                 thetas.append(_angle(np.array([1,0]), vec_uv))
         if len(thetas) == 0: 
-            th = kwargs.get("theta_sep", default_kwargs["theta_sep"])
-            phis = np.linspace(th, 2*np.pi - th, k)
+            th = kwargs.get("theta_loop_sep", default_kwargs["theta_loop_sep"])
+            phis = np.pi
         else:
             thetas = np.sort(thetas)
             thetas_in_space = list(np.diff(thetas)) + [2 * np.pi - thetas[-1] + thetas[0]]
 
             i_max = np.argmax(thetas_in_space)
-            th = kwargs.get("theta_sep", default_kwargs["theta_sep"])
+            th = kwargs.get("theta_loop_sep", default_kwargs["theta_loop_sep"])
 
             k = len(keys) # number of loops to define
-            phis = np.linspace(thetas[i_max] + th, thetas[i_max] + thetas_in_space[i_max] - th, k)
-
-            for p in phis:
-                loops_line_collection.append(_loop(pos_u, 1, p, th))
+            if k%2 != 0:
+                phi_0 = (2*thetas[i_max] + thetas_in_space[i_max])/2 - ((k-1)//2) * 2 * th
+                phis = [phi_0 + 2*th*i for i in range(k)]
+            else:
+                phi_0 = (2*thetas[i_max] + thetas_in_space[i_max])/2 - (k//2) * 2 * th
+                phi_1 = (2*thetas[i_max] + thetas_in_space[i_max])/2 + (k//2) * 2 * th
+                phis = [phi_0 + 2*th*i for i in range(k//2)] + [phi_1 - 2*th*i for i in range(k//2)]
+        for p in phis:
+            loops_line_collection.append(_loop(pos_u, 1, p, th))
     
                 
     line_collection = LineCollection(edge_line_collection,
